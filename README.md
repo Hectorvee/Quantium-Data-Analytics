@@ -75,7 +75,6 @@ quantium-data-analytics/
 
 ## Contact
 If you have any questions or feedback, feel free to reach out to me via:
-- **Email**: your-email@example.com
-- **LinkedIn**: [Your LinkedIn Profile](https://linkedin.com/in/yourprofile)
+- **Email**: vukosi1632@gmail.com
 
 Thank you for exploring this project!
