@@ -1,0 +1,270 @@
+---
+title: "Quantium Data Analysis"
+author: "Hector Mathonsi"
+date: 2024-12-11
+output:
+    html_notebook:
+        theme: flatly
+        highlight: tango
+        toc: true
+        toc_float: true
+---
+
+# Abstract
+
+This report presents a strategic recommendation to assist Julia, the Category Manager, in preparing for an upcoming category review. The analysis focuses on customer purchasing trends and chip-buying behaviors, with particular attention to segmenting customers and identifying key metrics that define their behavior. Utilizing R, with Python as an alternative tool, this study includes data cleaning, outlier detection, and the creation of derived features like pack size and brand name. High-level data summaries and targeted metrics enable the identification of spending drivers across customer segments. The goal is to develop actionable insights with commercial applicability to inform Julia's strategic decisions effectively.
+
+# Data Preparation
+
+## Loading Libraries
+```{r}
+# Load the required libraries
+library(readxl)
+library(dplyr)
+```
+
+## Importing Data
+```{r}
+# Load the data
+transaction_data <- read_excel("data/QVI_transaction_data.xlsx")
+customer_data <- read.csv("data/QVI_purchase_behaviour.csv")
+
+# Display the data
+transaction_data
+customer_data
+```
+
+## Summary Statistics
+```{r}
+# Summary statistics for transaction data
+summary(transaction_data)   # Summary statistics for transaction data
+str(transaction_data)    # Structure of transaction data
+nrow(transaction_data)   # Number of rows in transaction data
+
+# Summary statistics for customer data
+summary(customer_data)   # Summary statistics for customer data
+str(customer_data)    # Structure of customer data
+nrow(customer_data)   # Number of rows in customer data
+```
+
+## Variables Description
+
+The transaction data contains the following variables:
+
+- **DATE**: Date of purchase
+- **STORE_NBR**: Store number
+- **LYLTY_CARD_NBR**: Customer loyalty card number
+- **TXN_ID**: Transaction ID
+- **PROD_NBR**: Product number
+- **PROD_NAME**: Product name
+- **PROD_QTY**: Quantity of product purchased
+- **TOT_SALES**: Total sales ($)
+
+The customer data contains the following variables:
+
+- **LYLTY_CARD_NBR**: Customer loyalty card number
+- **LIFESTAGE**: Customer lifestage
+- **PREMIUM_CUSTOMER**: Customer premium status
+
+# Data Cleaning
+
+## Missing Values
+```{r}
+# Check for missing values in transaction data
+colSums(is.na(transaction_data))
+
+# Check for missing values in customer data
+colSums(is.na(customer_data))
+```
+
+From the results, there are no missing values in both the transaction and customer data.
+
+## Fix Data Types
+```{r}
+# Fix date format in transaction data
+transaction_data$DATE <- as.Date(transaction_data$DATE, origin = "1899-12-30")
+transaction_data
+
+# Check unique values in all variables in transaction data
+sort(unique(transaction_data$STORE_NBR))
+sort(unique(transaction_data$PROD_NBR))
+sort(unique(transaction_data$PROD_NAME))
+sort(unique(transaction_data$PROD_QTY))
+sort(unique(transaction_data$TOT_SALES))
+
+# Check unique values in all variables in customer data
+sort(unique(customer_data$LIFESTAGE))
+sort(unique(customer_data$PREMIUM_CUSTOMER))
+```
+
+## Outlier Detection
+```{r}
+# Boxplot for total sales
+boxplot(transaction_data$TOT_SALES, main = "Total Sales Boxplot")
+hist(transaction_data$TOT_SALES, main = "Total Sales Histogram")
+
+# Remove outliers
+q1 <- quantile(transaction_data$TOT_SALES, 0.25, na.rm = TRUE)  # First quartile
+q3 <- quantile(transaction_data$TOT_SALES, 0.75, na.rm = TRUE)  # First quartile
+IQR <- q3 - q1
+
+lower_bound <- q1 - 1.5 * IQR
+upper_bound <- q3 + 1.5 * IQR
+
+transaction_data <- transaction_data[transaction_data$TOT_SALES <= upper_bound, ]
+
+# Check for outliers in total sales
+boxplot(transaction_data$TOT_SALES, main = "Total Sales Boxplot")
+hist(transaction_data$TOT_SALES, main = "Total Sales Histogram")
+```
+
+Both histogram and boxplot show that the outliers have been removed from the total sales data and the total sales data now looks normally distributed. We now use numerical method to test our hypothesis.
+
+- **Null Hypothesis**: The data is normally distributed.
+- **Alternative Hypothesis**: The data is not normally distributed.
+
+```{r}
+# Shapiro-Wilk test for normality
+sample_tot_sales <- transaction_data[sample(nrow(transaction_data), 1000), ]$TOT_SALES
+shapiro.test(sample_tot_sales)
+```
+
+The p-value is 7.682e-08 which is less than 0.05. Therefore, we reject the null hypothesis and conclude that the data is not normally distributed.
+
+## Merge Data
+```{r}
+# Merge transaction and customer data by loyalty card number
+merged_data <- merge(transaction_data, customer_data, by = "LYLTY_CARD_NBR")
+merged_data
+```
+
+# Exploratory Data Analysis (EDA)
+
+## Life Stage Analysis
+
+I will analyze the distribution of customers across different life stages.
+
+### YOUNG SINGLES/COUPLES
+```{r}
+# Sample data for young singles/couples
+young_singles_couples <- merged_data[merged_data$LIFESTAGE == "YOUNG SINGLES/COUPLES", ]
+young_singles_couples
+
+# Summary statistics for young singles/couples
+summary(young_singles_couples) # Summary statistics for young singles/couples
+str(young_singles_couples)  # Structure of young singles/couples
+
+# Total Sales of young singles/couples
+sum(young_singles_couples$TOT_SALES, na.rm = TRUE)
+```
+
+Looking at the summary statistics, we can see that their average spent money is around **`$7.159`**, with an average quantity of **`1.832`** products purchased. The total sales under young singles/couples are **`$260,405.3`**.
+
+```{r}
+# Histogram of total sales for young singles/couples
+hist(young_singles_couples$TOT_SALES, main = "Total Sales for Young Singles/Couples", xlab = "Total Sales ($)", ylab = "Frequency", col = "skyblue")
+```
+
+The histogram shows that the total sales for young singles/couples might be normally distributed. We now use numerical method to test our hypothesis.
+
+- **Null Hypothesis**: The data is normally distributed.
+- **Alternative Hypothesis**: The data is not normally distributed.
+
+```{r}
+# Shapiro-Wilk test for normality
+sample_tot_sales_young_SC <- young_singles_couples[sample(nrow(young_singles_couples), 1000), ]$TOT_SALES
+shapiro.test(sample_tot_sales_young_SC)
+```
+
+The p-value is 1.22e-11 which is less than 0.05. Therefore, we reject the null hypothesis and conclude that the data is not normally distributed.
+
+```{r}
+# Summarize total sales by product name
+product_sales <- young_singles_couples %>%
+  group_by(PROD_NAME) %>%
+  summarise(Total_Sales = sum(TOT_SALES, na.rm = TRUE)) %>%
+  arrange(desc(Total_Sales))  # Optional: Sort by total sales in descending order
+product_sales
+```
+
+From this table, we can see the total sales for each product purchased by young singles and couples. The top 5 popular under this category are:
+
+1. Dorito Corn Chp Supreme 380g	with total sales of **`$5 655.0`**
+2. Smiths Crnkle Chip Orgnl Big Bag 380g with total sales of **`$5 192.0`**
+3. Kettle Mozzarella Basil & Pesto 175g with total sales of **`$5 119.2`**
+4. Smiths Crinkle Chips Salt & Vinegar 330g with total sales of **`$4 930.5`**
+5. Doritos Cheese Supreme 330g with total sales of **`$4 839.3`**
+
+```{r}
+# Summarize total sales by premium status
+premium_status_sales <- young_singles_couples %>%
+        group_by(PREMIUM_CUSTOMER) %>%
+        summarize(Total_sales = sum(TOT_SALES, na.rm = TRUE)) %>%
+        arrange(desc(Total_sales))  # Optional: Sort by total sales in descending order
+premium_status_sales
+
+# Barplot for total sales by premium status
+barplot(premium_status_sales$Total_sales, names.arg = premium_status_sales$PREMIUM_CUSTOMER, main = "Total Sales by Premium Status for Young Singles/Couples", xlab = "Premium Status", ylab = "Total Sales ($)", col = "skyblue")
+```
+
+From this table, we can see the total sales for each premium status purchased by young singles and couples. We can see that Mainstream have the highest total sales of **`$156 882.0`**, followed by Budget with **`$60 973.6`** and then Premium with **`$41 520.4`**. Now we investigate top products in each premium status by total sales.
+
+```{r}
+# Sample Mainstream Customers
+mainstream_customers <- young_singles_couples[young_singles_couples$PREMIUM_CUSTOMER == "Mainstream", ]
+
+# Summarize total sales by product name for mainstream customers
+product_sales <- mainstream_customers %>%
+  group_by(PROD_NAME) %>%
+  summarise(Total_Sales = sum(TOT_SALES, na.rm = TRUE)) %>%
+  arrange(desc(Total_Sales))  # Optional: Sort by total sales in descending order
+product_sales
+```
+
+
+```{r}
+# Sample Mainstream Customers
+budget_customers <- young_singles_couples[young_singles_couples$PREMIUM_CUSTOMER == "Budget", ]
+
+# Summarize total sales by product name for mainstream customers
+product_sales <- budget_customers %>%
+  group_by(PROD_NAME) %>%
+  summarise(Total_Sales = sum(TOT_SALES, na.rm = TRUE)) %>%
+  arrange(desc(Total_Sales))  # Optional: Sort by total sales in descending order
+product_sales
+```
+
+```{r}
+# Sample Mainstream Customers
+premium_customers <- young_singles_couples[young_singles_couples$PREMIUM_CUSTOMER == "Premium", ]
+
+# Summarize total sales by product name for mainstream customers
+product_sales <- premium_customers %>%
+  group_by(PROD_NAME) %>%
+  summarise(Total_Sales = sum(TOT_SALES, na.rm = TRUE)) %>%
+  arrange(desc(Total_Sales))  # Optional: Sort by total sales in descending order
+product_sales
+```
+
+Dorito Corn Chp Supreme 380g	3659.5
+Smiths Crnkle Chip Orgnl Big Bag 380g	3481.0
+Kettle Mozzarella Basil & Pesto 175g	3358.8
+Smiths Crinkle Chips Salt & Vinegar 330g	3317.4
+Doritos Cheese Supreme 330g	3169.2
+
+Dorito Corn Chp Supreme 380g	1163.5
+Doritos Cheese Supreme 330g	1077.3
+Kettle Sea Salt And Vinegar 175g	1069.2
+Kettle Mozzarella Basil & Pesto 175g	1004.4
+Smiths Crinkle Chips Salt & Vinegar 330g	969.0
+
+Dorito Corn Chp Supreme 380g	832.0
+Smiths Crnkle Chip Orgnl Big Bag 380g	808.3
+Kettle Mozzarella Basil & Pesto 175g	756.0
+Kettle Sweet Chilli And Sour Cream 175g	723.6
+Tostitos Splash Of Lime 175g	712.8
+
+
+
+
+
