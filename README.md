@@ -29,28 +29,6 @@ Welcome to my GitHub repository for the Quantium Data Analytics Virtual Experien
 
 ---
 
-## Repository Structure
-```
-quantium-data-analytics/
-|-- Task_1/
-|   |-- data_cleaning.py      # Scripts for data cleaning
-|   |-- customer_analysis.py  # Scripts for customer segmentation
-|   |-- visualizations.ipynb  # Jupyter notebook for visualizations
-|
-|-- Task_2/
-|   |-- uplift_testing.py     # Scripts for experimentation
-|   |-- control_selection.py  # Scripts for control store selection
-|   |-- trial_vs_control.ipynb # Jupyter notebook for analysis
-|
-|-- Task_3/
-|   |-- client_report.pdf     # Final client report
-|   |-- visualizations/       # Directory for report visualizations
-|
-|-- README.md                 # Project overview (this file)
-```
-
----
-
 ## Tools and Technologies Used
 - **Programming Languages**: Python, R
 - **Libraries**: pandas, numpy, matplotlib, seaborn, statsmodels
